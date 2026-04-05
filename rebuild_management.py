@@ -1,0 +1,665 @@
+# -*- coding: utf-8 -*-
+"""重建 management.html"""
+import json, re
+
+data = json.load(open('indicators_clean.json', 'r', encoding='utf-8'))
+data_count = len(data)
+
+html = '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指标管理系统 - 医疗质量指标</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--surface:#ffffff;--surface2:#f8fafc;
+  --border:#e2e8f0;--border2:#cbd5e1;--text:#1e293b;
+  --text2:#64748b;--text3:#94a3b8;
+  --primary:#2563eb;--primary-light:#dbeafe;--primary-dark:#1d4ed8;
+  --accent:#0ea5e9;--accent-light:#e0f2fe;
+  --green:#10b981;--green-light:#d1fae5;
+  --orange:#f59e0b;--orange-light:#fef3c7;
+  --purple:#8b5cf6;--purple-light:#ede9fe;
+  --red:#ef4444;--red-light:#fee2e2;
+  --shadow:0 2px 8px rgba(0,0,0,.08);--shadow-lg:0 8px 24px rgba(0,0,0,.12);
+  --radius:10px;--radius-sm:6px;
+}
+[data-theme="dark"]{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#0f172a;
+  --border:#334155;--border2:#475569;--text:#f1f5f9;
+  --text2:#94a3b8;--text3:#64748b;
+  --primary:#3b82f6;--primary-light:#1e3a5f;--primary-dark:#60a5fa;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;line-height:1.6}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Header */
+.header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.header-inner{max-width:1400px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.header-icon{font-size:24px}
+.header-title h1{color:#fff;font-size:16px;font-weight:700}
+.header-title p{color:rgba(255,255,255,.5);font-size:11px;margin-top:2px}
+.header-search{flex:1;min-width:200px;max-width:400px;position:relative}
+.search-input{width:100%;padding:9px 14px 9px 38px;border-radius:var(--radius);border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:14px;outline:none;transition:border-color .2s}
+.search-input::placeholder{color:rgba(255,255,255,.5)}
+.search-input:focus{border-color:rgba(255,255,255,.5)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.6);font-size:15px}
+.header-actions{display:flex;gap:8px;flex-shrink:0}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{background:#059669}
+.btn-outline{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn-outline:hover{background:rgba(255,255,255,.2)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:var(--green-light);color:#065f46}
+.badge-warn{background:var(--orange-light);color:#92400e}
+.badge-info{background:var(--primary-light);color:#1e40af}
+[data-theme="dark"] .badge-ok{background:#064e3b;color:#6ee7b7}
+[data-theme="dark"] .badge-warn{background:#451a03;color:#fcd34d}
+[data-theme="dark"] .badge-info{background:#1e3a5f;color:#93c5fd}
+
+/* Main layout */
+.main{max-width:1400px;margin:0 auto;padding:20px 24px}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;padding:14px 20px;background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow)}
+.stat-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.stat-item strong{font-size:16px;color:var(--text);font-weight:700}
+[data-theme="dark"] .stat-item strong{color:#fff}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filter-group{display:flex;align-items:center;gap:8px}
+.filter-label{font-size:13px;color:var(--text2);font-weight:600}
+select,input[type="text"],input[type="search"]{padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;transition:border-color .2s}
+select:focus,input:focus{border-color:var(--primary)}
+select{min-width:160px}
+input[type="text"]{min-width:140px}
+
+/* Table */
+.table-wrap{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+thead{background:var(--bg);position:sticky;top:0;z-index:1}
+th{padding:11px 14px;text-align:left;font-weight:700;color:var(--text2);font-size:12px;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--primary)}
+th .sort-icon{font-size:10px;margin-left:4px;opacity:.5}
+th.sorted .sort-icon{opacity:1}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+tr.modified td{background:#fffbeb}
+[data-theme="dark"] tr.modified td{background:#451a03}
+
+/* Cell styles */
+.td-name{max-width:220px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-code{font-family:'Courier New',monospace;font-size:12px;color:var(--primary);white-space:nowrap}
+.td-cat{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.td-type{white-space:nowrap}
+.td-actions{display:flex;gap:6px;flex-shrink:0}
+.td-short{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px}
+.td-formula{font-size:12px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace}
+.td-notes{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text2)}
+
+/* Tags */
+.type-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.type-tag.spec{background:#ede9fe;color:#5b21b6}
+.type-tag.tech{background:#e0f2fe;color:#0369a1}
+.type-tag.other{background:#f1f5f9;color:#475569}
+[data-theme="dark"] .type-tag.spec{background:#2e1065;color:#c4b5fd}
+[data-theme="dark"] .type-tag.tech{background:#0c4a6e;color:#7dd3fc}
+[data-theme="dark"] .type-tag.other{background:#1e293b;color:#94a3b8}
+.sub-badge{display:inline-block;padding:1px 6px;background:var(--orange-light);color:#92400e;border-radius:4px;font-size:10px;font-weight:700}
+[data-theme="dark"] .sub-badge{background:#451a03;color:#fcd34d}
+.mod-badge{display:inline-block;padding:1px 6px;background:var(--orange);color:#fff;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px}
+[data-theme="dark"] .mod-badge{background:#f59e0b;color:#000}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px}
+.pg-btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;transition:all .2s}
+.pg-btn:hover{border-color:var(--primary);color:var(--primary)}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-info{font-size:13px;color:var(--text2);padding:0 12px}
+
+/* Edit Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);transform:translateY(20px);transition:transform .25s}
+.modal-overlay.show .modal{transform:translateY(0)}
+.modal-hd{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-hd h2{font-size:16px;font-weight:700}
+.modal-hd .close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);line-height:1;padding:4px;border-radius:6px}
+.modal-hd .close-btn:hover{background:var(--bg);color:var(--text)}
+.modal-bd{flex:1;overflow-y:auto;padding:20px 24px}
+.modal-ft{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;flex-wrap:wrap}
+
+/* Form */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.5px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;transition:border-color .2s;font-family:inherit}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--primary)}
+.form-group textarea{resize:vertical;min-height:80px;line-height:1.6}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Status bar */
+.status-bar{display:flex;align-items:center;gap:16px;font-size:12px;color:var(--text2);padding:10px 0;flex-wrap:wrap}
+.status-item{display:flex;align-items:center;gap:5px}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.green{background:var(--green)}
+.status-dot.orange{background:var(--orange)}
+.status-dot.gray{background:var(--text3)}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-state .emoji{font-size:48px;margin-bottom:16px}
+.empty-state p{font-size:15px}
+
+/* Loading */
+.loading{text-align:center;padding:60px 20px;color:var(--text2);font-size:14px}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:var(--radius);box-shadow:var(--shadow-lg);font-size:13px;z-index:300;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:#065f46}
+.toast.error{background:#991b1b}
+
+/* Dark toggle */
+.theme-toggle{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer;font-size:13px}
+.theme-toggle:hover{background:rgba(255,255,255,.2)}
+
+/* Modified count */
+.modified-count{background:var(--orange);color:#fff;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700;margin-left:4px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Responsive */
+@media(max-width:768px){
+  .header-inner{padding:12px 16px;gap:10px}
+  .header-search{max-width:100%;order:3;width:100%}
+  .main{padding:16px}
+  .filter-bar{gap:8px}
+  .form-row{grid-template-columns:1fr}
+  .modal{max-height:95vh}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <span class="header-icon">🏥</span>
+    <div class="header-title">
+      <h1>医疗质量指标管理系统</h1>
+      <p>数据核对 · 编辑修改 · 导出更新</p>
+    </div>
+    <div class="header-search">
+      <span class="search-icon">🔍</span>
+      <input type="search" id="searchInput" class="search-input" placeholder="搜索指标名称、编码、分类…">
+    </div>
+    <div class="header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+      <button class="btn btn-success" onclick="saveAll()">💾 保存修改</button>
+      <button class="btn btn-primary" onclick="exportJSON()">📥 导出JSON</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item">指标总数 <strong id="statTotal">加载中…</strong></div>
+    <div class="stat-item">专业类 <strong id="statSpec">-</strong></div>
+    <div class="stat-item">技术类 <strong id="statTech">-</strong></div>
+    <div class="stat-item">其他 <strong id="statOther">-</strong></div>
+    <div class="stat-item" id="statModified" style="margin-left:auto"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">分类：</span>
+      <select id="filterCat"><option value="">全部分类</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">类型：</span>
+      <select id="filterType">
+        <option value="">全部类型</option>
+        <option value="专业（专科）类">专业（专科）类</option>
+        <option value="医疗技术类">医疗技术类</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">显示：</span>
+      <select id="filterShow">
+        <option value="all">全部</option>
+        <option value="modified">仅已修改</option>
+        <option value="noCode">无编码</option>
+        <option value="noNotes">无注释</option>
+        <option value="noFormula">无公式</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">排序：</span>
+      <select id="filterSort">
+        <option value="default">默认顺序</option>
+        <option value="name_asc">名称 A→Z</option>
+        <option value="name_desc">名称 Z→A</option>
+        <option value="cat">按分类</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table id="mainTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"><tr><td colspan="10"><div class="loading"><span class="spinner"></span>加载数据中…</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination"></div>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <div class="status-item"><span class="status-dot green" id="statusDot"></span><span id="statusText">就绪</span></div>
+    <div class="status-item">本地存储: <span id="lsStatus">-</span></div>
+    <div class="status-item" style="margin-left:auto;font-size:11px;color:var(--text3)">修改数据后请点击「💾 保存修改」</div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h2>✏️ 编辑指标</h2>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-bd" id="modalBd"></div>
+    <div class="modal-ft">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-success" onclick="saveEdit()">💾 保存此条</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 数据 =====
+const LS_KEY = 'medical_indicators_edited';
+const DATA_URL = 'indicators_clean.json';
+
+let allData = [];
+let filtered = [];
+let modified = new Set();
+let currentEditIdx = null;
+let currentPage = 1;
+const PAGE_SIZE = 50;
+
+// ===== Init =====
+(async function init() {
+  // 尝试从localStorage加载修改版
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        allData = parsed;
+        // 找出哪些被修改过
+        const orig = await loadOriginal();
+        if (orig) {
+          orig.forEach((o, i) => {
+            if (JSON.stringify(o) !== JSON.stringify(allData[i])) modified.add(i);
+          });
+        }
+        setStatus('orange', '从本地存储加载（已修改' + modified.size + '条）');
+      } else {
+        await loadFromUrl();
+      }
+    } else {
+      await loadFromUrl();
+    }
+  } catch(e) {
+    await loadFromUrl();
+  }
+
+  // 填充分类下拉
+  const cats = [...new Set(allData.map(d => d.category || '').filter(Boolean))].sort();
+  const catSel = document.getElementById('filterCat');
+  cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+
+  updateStats();
+  buildTableHead();
+  applyFilters();
+
+  // 事件监听
+  document.getElementById('searchInput').addEventListener('input', debounce(() => { currentPage = 1; applyFilters(); }, 200));
+  document.getElementById('filterCat').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+  document.getElementById('filterType').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+  document.getElementById('filterShow').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+  document.getElementById('filterSort').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+  document.getElementById('editModal').addEventListener('click', e => { if (e.target.id === 'editModal') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  updateLsStatus();
+})();
+
+async function loadFromUrl() {
+  try {
+    const resp = await fetch(DATA_URL + '?t=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        allData = data;
+        setStatus('green', '从 indicators_clean.json 加载');
+        return;
+      }
+    }
+  } catch(e) {}
+  setStatus('gray', '无法加载 indicators_clean.json，请确认文件与本页面在同一目录');
+}
+
+async function loadOriginal() {
+  try {
+    const resp = await fetch(DATA_URL + '?t=' + Date.now());
+    if (resp.ok) return await resp.json();
+  } catch(e) {}
+  return null;
+}
+
+// ===== 筛选 & 排序 =====
+function applyFilters() {
+  const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+  const cat = document.getElementById('filterCat').value;
+  const type = document.getElementById('filterType').value;
+  const show = document.getElementById('filterShow').value;
+  const sort = document.getElementById('filterSort').value;
+
+  filtered = allData.filter((d, i) => {
+    if (kw && !(d.name||'').toLowerCase().includes(kw) &&
+        !(d.code||'').toLowerCase().includes(kw) &&
+        !(d.category||'').toLowerCase().includes(kw) &&
+        !(d.definition||'').toLowerCase().includes(kw) &&
+        !(d.significance||'').toLowerCase().includes(kw)) return false;
+    if (cat && d.category !== cat) return false;
+    if (type && d.type !== type) return false;
+    if (show === 'modified' && !modified.has(i)) return false;
+    if (show === 'noCode' && d.code) return false;
+    if (show === 'noNotes' && d.notes) return false;
+    if (show === 'noFormula' && d.formula) return false;
+    return true;
+  });
+
+  // 排序
+  if (sort === 'name_asc') filtered.sort((a, b) => (a.name||'').localeCompare(b.name||'','zh'));
+  else if (sort === 'name_desc') filtered.sort((a, b) => (b.name||'').localeCompare(a.name||'','zh'));
+  else if (sort === 'cat') filtered.sort((a, b) => (a.category||'').localeCompare(b.category||'','zh'));
+
+  document.getElementById('statTotal').textContent = allData.length;
+  document.getElementById('resultCount') && (document.getElementById('resultCount').textContent = filtered.length);
+  renderTable();
+  renderPagination();
+}
+
+// ===== 统计 =====
+function updateStats() {
+  document.getElementById('statTotal').textContent = allData.length;
+  document.getElementById('statSpec').textContent = allData.filter(d => d.type === '专业（专科）类').length;
+  document.getElementById('statTech').textContent = allData.filter(d => d.type === '医疗技术类').length;
+  document.getElementById('statOther').textContent = allData.filter(d => d.type === '其他').length;
+  const mc = document.getElementById('statModified');
+  if (modified.size > 0) {
+    mc.innerHTML = '<span class="modified-count">' + modified.size + ' 条已修改</span>';
+  } else {
+    mc.innerHTML = '';
+  }
+}
+
+// ===== 表格渲染 =====
+function buildTableHead() {
+  const th = document.getElementById('tableHead');
+  th.innerHTML = '<tr>' +
+    '<th>#</th>' +
+    '<th onclick="sortBy(\\'name\\')">名称 <span class="sort-icon">↕</span></th>' +
+    '<th onclick="sortBy(\\'code\\')">编码 <span class="sort-icon">↕</span></th>' +
+    '<th>分类</th>' +
+    '<th>类型</th>' +
+    '<th>公式</th>' +
+    '<th onclick="sortBy(\\'notes\\')">注释 <span class="sort-icon">↕</span></th>' +
+    '<th>定义摘要</th>' +
+    '<th>操作</th>' +
+    '</tr>';
+}
+
+function sortBy(field) {
+  const sel = document.getElementById('filterSort');
+  if (field === 'name') sel.value = sel.value === 'name_asc' ? 'name_desc' : 'name_asc';
+  else if (field === 'code') { /* code sort toggle */ }
+  applyFilters();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('tableBody');
+
+  if (page.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="emoji">🔍</div><p>没有找到符合条件的指标</p></div></td></tr>';
+    return;
+  }
+
+  // 获取全局索引（用于修改记录）
+  const globalIndices = page.map(item => allData.indexOf(item));
+
+  tbody.innerHTML = page.map((d, localIdx) => {
+    const gi = globalIndices[localIdx];
+    const isMod = modified.has(gi);
+    const typeTag = d.type === '专业（专科）类' ? 'spec' : d.type === '医疗技术类' ? 'tech' : 'other';
+    const hasSub = d.sub_indicators && d.sub_indicators.length > 0;
+    const defShort = (d.definition||'').replace(/\\n/g,' ').trim().slice(0, 60);
+    const formulaShort = (d.formula||'').replace(/\\n/g,' ').trim().slice(0, 40);
+    const notesShort = (d.notes||'').replace(/\\n/g,' ').trim().slice(0, 50);
+
+    return '<tr class="' + (isMod ? 'modified' : '') + '" data-idx="' + gi + '">' +
+      '<td style="color:var(--text3);font-size:12px;text-align:center">' + (start + localIdx + 1) + '</td>' +
+      '<td class="td-name" title="' + escHtml(d.name||'') + '">' + escHtml(d.name||'') + (hasSub ? '<span class="sub-badge">含子指标</span>' : '') + (isMod ? '<span class="mod-badge">改</span>' : '') + '</td>' +
+      '<td class="td-code">' + escHtml(d.code||'<span style="color:var(--text3);font-style:italic">无</span>') + '</td>' +
+      '<td class="td-cat" title="' + escHtml(d.category||'') + '">' + escHtml(d.category||'') + '</td>' +
+      '<td class="td-type"><span class="type-tag ' + typeTag + '">' + escHtml((d.type||'').replace('类','').replace('专业（专科）','专科')) + '</span></td>' +
+      '<td class="td-formula" title="' + escHtml(d.formula||'') + '">' + escHtml(formulaShort||'<span style="color:var(--text3);font-style:italic">无</span>') + '</td>' +
+      '<td class="td-notes" title="' + escHtml(d.notes||'') + '">' + escHtml(notesShort||'<span style="color:var(--text3);font-style:italic">无</span>') + '</td>' +
+      '<td class="td-short" title="' + escHtml(d.definition||'') + '">' + escHtml(defShort||'<span style="color:var(--text3);font-style:italic">无</span>') + '</td>' +
+      '<td class="td-actions"><button class="btn btn-primary btn-sm" onclick="openEdit(' + gi + ')">编辑</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function renderPagination() {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = '';
+  html += '<button class="pg-btn" onclick="goPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>上一页</button>';
+  // 页码
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) pages.push(i);
+    else if (pages[pages.length-1] !== '…') pages.push('…');
+  }
+  pages.forEach(p => {
+    if (p === '…') html += '<span class="pg-info">…</span>';
+    else html += '<button class="pg-btn' + (p === currentPage ? '" style="background:var(--primary);color:#fff;border-color:var(--primary)' : '') + '" onclick="goPage(' + p + ')">' + p + '</button>';
+  });
+  html += '<button class="pg-btn" onclick="goPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>下一页</button>';
+  html += '<span class="pg-info">第 ' + currentPage + ' / ' + totalPages + ' 页，共 ' + filtered.length + ' 条</span>';
+  pg.innerHTML = html;
+}
+
+function goPage(n) {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(n, totalPages));
+  renderTable();
+  renderPagination();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ===== 编辑弹窗 =====
+function openEdit(globalIdx) {
+  currentEditIdx = globalIdx;
+  const d = allData[globalIdx];
+  const fields = [
+    {key:'name', label:'指标名称', type:'text'},
+    {key:'code', label:'指标编码', type:'text'},
+    {key:'category', label:'专业分类', type:'text'},
+    {key:'type', label:'类型', type:'select', options:['专业（专科）类','医疗技术类','其他']},
+    {key:'definition', label:'定义', type:'textarea'},
+    {key:'formula', label:'计算公式', type:'textarea'},
+    {key:'significance', label:'指标意义', type:'textarea'},
+    {key:'notes', label:'注释 / 说明', type:'textarea'},
+  ];
+
+  let html = '';
+  fields.forEach(f => {
+    const val = d[f.key] || '';
+    html += '<div class="form-group">';
+    html += '<label>' + f.label + (modified.has(globalIdx) ? ' <span class="mod-badge">已改</span>' : '') + '</label>';
+    if (f.type === 'textarea') {
+      html += '<textarea id="ef_' + f.key + '" rows="' + (f.key === 'definition' || f.key === 'notes' ? '4' : '3') + '">' + escHtml(val) + '</textarea>';
+    } else if (f.type === 'select') {
+      html += '<select id="ef_' + f.key + '">';
+      f.options.forEach(opt => { html += '<option value="' + opt + '"' + (val === opt ? ' selected' : '') + '>' + opt + '</option>'; });
+      html += '</select>';
+    } else {
+      html += '<input type="text" id="ef_' + f.key + '" value="' + escHtml(val) + '">';
+    }
+    html += '</div>';
+  });
+
+  document.getElementById('modalBd').innerHTML = html;
+  document.getElementById('editModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('ef_name') && document.getElementById('ef_name').focus();
+}
+
+function saveEdit() {
+  if (currentEditIdx === null) return;
+  const d = allData[currentEditIdx];
+  ['name','code','category','type','definition','formula','significance','notes'].forEach(key => {
+    const el = document.getElementById('ef_' + key);
+    if (el) d[key] = el.value;
+  });
+  modified.add(currentEditIdx);
+  closeModal();
+  updateStats();
+  renderTable();
+  // 快速提示
+  const badge = document.getElementById('statModified');
+  badge.innerHTML = '<span class="modified-count">' + modified.size + ' 条已修改</span>';
+  showToast('✅ 已保存修改（' + modified.size + '条）', 'success');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('show');
+  document.body.style.overflow = '';
+  currentEditIdx = null;
+}
+
+// ===== 保存 & 导出 =====
+function saveAll() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(allData));
+    updateLsStatus();
+    showToast('✅ 已保存到本地存储（' + modified.size + '条修改）', 'success');
+  } catch(e) {
+    showToast('❌ 保存失败：' + e.message, 'error');
+  }
+}
+
+function updateLsStatus() {
+  try {
+    const s = localStorage.getItem(LS_KEY);
+    document.getElementById('lsStatus').textContent = s ? (JSON.parse(s).length + ' 条指标') : '空';
+  } catch(e) {
+    document.getElementById('lsStatus').textContent = '获取失败';
+  }
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(allData, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'indicators_edited_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📥 已导出 JSON 文件', 'success');
+}
+
+// ===== 工具函数 =====
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function debounce(fn, ms) {
+  let t;
+  return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
+}
+
+function setStatus(color, text) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + color;
+  document.getElementById('statusText').textContent = text;
+}
+
+function showToast(msg, cls) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (cls ? ' ' + cls : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+// 恢复主题
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (saved === null && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+</body>
+</html>'''
+
+with open('management.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+
+print(f'✅ management.html 生成完成，共 {data_count} 条指标')
