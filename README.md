@@ -32,7 +32,7 @@
 可通过以下地址访问：
 
 ```
-https://exbear0919.github.io/medical_quality_indicators/
+https://exbear0919.github.io/MQI_v1.0/
 ```
 
 ## 📂 目录结构
