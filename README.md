@@ -29,11 +29,8 @@
 
 ### 方式二：GitHub Pages 在线访问
 
-手机端可通过以下地址访问：
-```
-https://exbear0919.github.io/MQI_v1.0/
-```
-电脑端可通过以下地址访问
+可通过以下地址访问：
+
 ```
 https://exbear0919.github.io/MQI_v1.0/medical_quality_indicators.html
 ```
